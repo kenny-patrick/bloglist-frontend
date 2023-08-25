@@ -63,6 +63,27 @@ const App = () => {
     setUser(null)
   }
 
+  const addBlog = (title, author, url) => {
+    const newBlog = {
+      title: title,
+      author: author,
+      url: url
+    }
+
+    blogFormRef?.current?.toggleVisibility()
+
+    blogService.create(newBlog).then(blog => {
+      setBlogs(blogs.concat(blog))
+      setNotifMsg(`a new blog ${blog.title} by ${blog.author} created`)
+      setNotifClass('message')
+      resetNotif()
+    }).catch(error => {
+      setNotifMsg(error)
+      setNotifClass('error')
+      resetNotif()
+    })
+  }
+
   if (user === null) {
     return (
       <div>
@@ -83,6 +104,7 @@ const App = () => {
       <p>{`${user.name} has logged in`} <button onClick={handleLogout}>log out</button></p>
       <Togglable buttonLabel='new blog' ref={blogFormRef}>
         <BlogForm
+          addBlog={addBlog}
           blogService={blogService}
           setNotifClass={setNotifClass}
           setNotifMsg={setNotifMsg}

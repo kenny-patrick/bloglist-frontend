@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const BlogForm = ({ blogService, setNotifClass, setNotifMsg, resetNotif, blogFormRef, blogs, setBlogs }) => {
+const BlogForm = ({ addBlog }) => {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [url, setUrl] = useState('')
@@ -11,34 +11,18 @@ const BlogForm = ({ blogService, setNotifClass, setNotifMsg, resetNotif, blogFor
     setUrl('')
   }
 
-  const addBlog = (event) => {
+  const handleSubmit = (event) => {
     event.preventDefault()
-    const newBlog = {
-      title: title,
-      author: author,
-      url: url
-    }
 
-    blogFormRef.current.toggleVisibility()
+    addBlog(title, author, url)
 
-    blogService.create(newBlog).then(blog => {
-      setBlogs(blogs.concat(blog))
-      setNotifMsg(`a new blog ${blog.title} by ${blog.author} created`)
-      setNotifClass('message')
-      resetNotif()
-      resetBlogForm()
-    }).catch(error => {
-      setNotifMsg(error)
-      setNotifClass('error')
-      resetNotif()
-      resetBlogForm()
-    })
+    resetBlogForm()
   }
 
   return (
     <div>
       <h2>create new</h2>
-      <form onSubmit={addBlog}>
+      <form onSubmit={handleSubmit}>
         <div>
           title:
           <input

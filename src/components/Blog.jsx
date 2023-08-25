@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-const Blog = ({ blog, blogService, user }) => {
+const Blog = ({ blog, blogService, user, likeBlog }) => {
   const [showDetails, setShowDetails] = useState(false)
 
   const toggleShowDetails = () => {
@@ -21,17 +21,6 @@ const Blog = ({ blog, blogService, user }) => {
   const hideWhenVisible = { display: showDetails ? 'none' : '' }
   const showWhenVisible = {
     display: showDetails ? '' : 'none',
-    listStyleType: 'none',
-    padding: 0,
-  }
-
-  const handleLikeBlog = async () => {
-    const blogObject = {
-      user: blog.user?.id,
-      likes: blog.likes + 1,
-
-    }
-    const updatedBlog = await blogService.update(blog.id, blogObject)
   }
 
   const handleRemoveBlog = async () => {
@@ -40,18 +29,30 @@ const Blog = ({ blog, blogService, user }) => {
     }
   }
 
+  const handleLike = () => {
+    event.preventDefault()
+
+    const blogObject = {
+      user: blog.user?.id,
+      likes: blog.likes + 1,
+
+    }
+
+    likeBlog(blog.id, blogObject)
+  }
+
   return (
     <div style={blogStyle}>
       <div style={hideWhenVisible}>
         <p>{blog.title} {blog.author} <button onClick={toggleShowDetails}>view</button></p>
       </div>
-      <ul style={showWhenVisible}>
-        <li>{blog.title} {blog.author} <button onClick={toggleShowDetails}>hide</button></li>
-        <li>{blog.url}</li>
-        <li>likes {blog.likes} <button onClick={handleLikeBlog}>like</button></li>
-        <li>{blog.user?.name}</li>
-        {user.name === blog.user?.name ? <li><button onClick={handleRemoveBlog}>remove</button></li> : ''}
-      </ul>
+      <div style={showWhenVisible} className={'blogDetails'}>
+        <p>{blog.title} {blog.author} <button onClick={toggleShowDetails}>hide</button></p>
+        <p>{blog.url}</p>
+        <p>likes {blog.likes} <button onClick={handleLike}>like</button></p>
+        <p>{blog.user?.name}</p>
+        <p>{user.name === blog.user?.name ? <button onClick={handleRemoveBlog}>remove</button> : ''}</p>
+      </div>
     </div>
   )
 }
