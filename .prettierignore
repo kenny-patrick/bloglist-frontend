@@ -1,0 +1,16 @@
+# Ignore artifacts:
+build
+coverage
+
+node_modules
+dist
+.eslintrc.cjs
+
+cypress
+cypress.config.jsx
+.babelrc
+index.html
+package-lock.json
+package.json
+README.module
+vite.config.js
