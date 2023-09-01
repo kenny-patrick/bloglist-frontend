@@ -1,41 +1,52 @@
 import { useState, useEffect, useRef } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
 import BlogList from "./components/BlogList";
 import LoginForm from "./components/LoginForm";
 import BlogForm from "./components/BlogForm";
 import Notification from "./components/Notification";
 import Togglable from "./components/Togglable";
+
 import blogService from "./services/blogs";
 import loginService from "./services/login";
 
+import { useNotificationDispatch } from "./context/NotificationContext";
+import { useUserDispatch, useUserValue } from "./context/UserContext";
+
 const App = () => {
-  const [blogs, setBlogs] = useState([]);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [user, setUser] = useState(null);
-  const [notifMsg, setNotifMsg] = useState(null);
-  const [notifClass, setNotifClass] = useState(null);
+  const queryClient = useQueryClient();
+
   const blogFormRef = useRef();
+
+  const notificationDispatch = useNotificationDispatch();
+  const userValue = useUserValue();
+  const userDispatch = useUserDispatch();
 
   useEffect(() => {
     const loggedUserJSON = window.localStorage.getItem("loggedBlogappUser");
     if (loggedUserJSON) {
       const user = JSON.parse(loggedUserJSON);
-      setUser(user);
+      userDispatch({ type: "LOGIN", payload: user });
       blogService.setToken(user.token);
     }
+  }, [userDispatch]);
 
-    blogService.getAll().then((blogs) => setBlogs(blogs));
-  }, [blogs]);
-
-  const resetNotif = () => {
+  const setNotification = (notifMsg, notifClass) => {
+    notificationDispatch({
+      type: notifClass,
+      payload: {
+        notifMsg,
+        notifClass,
+      },
+    });
     setTimeout(() => {
-      setNotifMsg(null);
-      setNotifClass(null);
+      notificationDispatch({
+        type: "CLEAR",
+      });
     }, 5000);
   };
 
-  const handleLogin = async (event) => {
-    event.preventDefault();
+  const login = async (username, password) => {
     try {
       const user = await loginService.login({
         username,
@@ -43,88 +54,84 @@ const App = () => {
       });
       window.localStorage.setItem("loggedBlogappUser", JSON.stringify(user));
       blogService.setToken(user.token);
-      setUser(user);
-      console.log(user);
-      setUsername("");
-      setPassword("");
+      userDispatch({
+        type: "LOGIN",
+        payload: user,
+      });
     } catch (exception) {
-      setNotifClass("error");
-      setNotifMsg("Wrong credentials");
-      resetNotif();
+      setNotification("Wrong credentials", "ERROR");
     }
   };
 
   const handleLogout = (event) => {
     event.preventDefault();
     window.localStorage.removeItem("loggedBlogappUser");
-    setUser(null);
+    userDispatch({
+      type: "LOGOUT",
+      payload: "",
+    });
   };
+
+  const newBlogMutation = useMutation({
+    mutationFn: blogService.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["blogs"] });
+    },
+    onError: (error) => {
+      setNotification("Error: unable to create new blog", "ERROR");
+    },
+  });
 
   const addBlog = (title, author, url) => {
     const newBlog = {
-      title: title,
-      author: author,
-      url: url,
+      title,
+      author,
+      url,
     };
 
     blogFormRef?.current?.toggleVisibility();
-
-    blogService
-      .create(newBlog)
-      .then((blog) => {
-        setBlogs(blogs.concat(blog));
-        setNotifMsg(`a new blog ${blog.title} by ${blog.author} created`);
-        setNotifClass("message");
-        resetNotif();
-      })
-      .catch((error) => {
-        setNotifMsg(error);
-        setNotifClass("error");
-        resetNotif();
-      });
+    newBlogMutation.mutate(newBlog);
+    setNotification(`a new blog ${title} by ${author} created`, "MESSAGE");
   };
 
-  if (user === null) {
+  const result = useQuery({
+    queryKey: ["blogs"],
+    queryFn: blogService.getAll,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
+
+  if (result.isLoading) {
+    return <div>loading data....</div>;
+  }
+
+  if (result.isError) {
+    return <div>cannot load data due to error in blog service</div>;
+  }
+
+  const blogs = result.data;
+
+  if (!userValue.isAuthenticated) {
     return (
       <div>
-        <Notification notifMsg={notifMsg} notifClass={notifClass} />
-        <LoginForm
-          handleLogin={handleLogin}
-          username={username}
-          setUsername={setUsername}
-          password={password}
-          setPassword={setPassword}
-        />
+        <Notification />
+        <LoginForm login={login} />
       </div>
     );
   }
   return (
     <div>
       <h2>blogs</h2>
-      <Notification notifMsg={notifMsg} notifClass={notifClass} />
+      <Notification />
       <p>
-        {`${user.name} has logged in`}{" "}
+        {`${userValue.user.name} has logged in `}
         <button onClick={handleLogout}>log out</button>
       </p>
       <Togglable buttonLabel="new blog" ref={blogFormRef}>
-        <BlogForm
-          addBlog={addBlog}
-          blogService={blogService}
-          setNotifClass={setNotifClass}
-          setNotifMsg={setNotifMsg}
-          resetNotif={resetNotif}
-          blogFormRef={blogFormRef}
-          blogs={blogs}
-          setBlogs={setBlogs}
-        />
+        <BlogForm addBlog={addBlog} />
       </Togglable>
       <br />
-      <BlogList
-        blogService={blogService}
-        user={user}
-        blogs={blogs}
-        setBlogs={setBlogs}
-      />
+      <BlogList blogs={blogs} setNotification={setNotification} />
     </div>
   );
 };

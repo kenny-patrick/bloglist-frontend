@@ -3,9 +3,20 @@ import "@testing-library/jest-dom";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Blog from "./Blog";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 describe("<Blog />", () => {
   let container;
+  const createWrapper = () => {
+    const queryClient = new QueryClient();
+
+    return ({ children }) => {
+      <QueryClientProvider client={queryClient}>
+        {children}
+      </QueryClientProvider>;
+    };
+  };
+
   const mockBlog = {
     title: "Test Blog",
     author: "John",
@@ -16,16 +27,13 @@ describe("<Blog />", () => {
     },
   };
 
-  const mockUser = {
-    name: "John",
-  };
-
-  const likeBlog = jest.fn();
+  const setNotification = jest.fn();
 
   beforeEach(() => {
-    container = render(
-      <Blog blog={mockBlog} user={mockUser} likeBlog={likeBlog} />,
-    ).container;
+    const wrapper = createWrapper();
+    container = render(<Blog blog={mockBlog} />, {
+      wrapper,
+    }).container;
   });
 
   test("renders title and author, details are not displayed initially", () => {

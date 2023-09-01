@@ -13,9 +13,7 @@ const BlogForm = ({ addBlog }) => {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-
     addBlog(title, author, url);
-
     resetBlogForm();
   };
 

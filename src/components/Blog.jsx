@@ -1,7 +1,12 @@
 import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-const Blog = ({ blog, blogService, user, likeBlog }) => {
+import blogService from "../services/blogs";
+import { useUserValue } from "../context/UserContext";
+
+const Blog = ({ blog, setNotification }) => {
   const [showDetails, setShowDetails] = useState(false);
+  const userValue = useUserValue();
 
   const toggleShowDetails = () => {
     setShowDetails(!showDetails);
@@ -22,11 +27,31 @@ const Blog = ({ blog, blogService, user, likeBlog }) => {
     display: showDetails ? "" : "none",
   };
 
+  const queryClient = useQueryClient();
+
+  const removeBlogMutation = useMutation({
+    mutationFn: (id) => blogService.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["blogs"] });
+    },
+  });
+
   const handleRemoveBlog = async () => {
     if (window.confirm(`Remove blog ${blog.title} by ${blog.author}`)) {
-      const response = await blogService.remove(blog.id);
+      removeBlogMutation.mutate(blog.id);
+      setNotification(
+        `Removed blog ${blog.title} by ${blog.author}`,
+        "MESSAGE",
+      );
     }
   };
+
+  const updateBlogMutation = useMutation({
+    mutationFn: ([id, object]) => blogService.update(id, object),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["blogs"] });
+    },
+  });
 
   const handleLike = () => {
     event.preventDefault();
@@ -36,7 +61,7 @@ const Blog = ({ blog, blogService, user, likeBlog }) => {
       likes: blog.likes + 1,
     };
 
-    likeBlog(blog.id, blogObject);
+    updateBlogMutation.mutate([blog.id, blogObject]);
   };
 
   return (
@@ -58,7 +83,7 @@ const Blog = ({ blog, blogService, user, likeBlog }) => {
         </p>
         <p>{blog.user?.name}</p>
         <p>
-          {user.name === blog.user?.name ? (
+          {userValue.user.name === blog.user?.name ? (
             <button onClick={handleRemoveBlog}>remove</button>
           ) : (
             ""

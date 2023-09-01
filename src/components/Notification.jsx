@@ -1,4 +1,6 @@
-const Notification = ({ notifMsg, notifClass }) => {
+import { useNotificationValue } from "../context/NotificationContext";
+
+const Notification = () => {
   const error = {
     width: "fit-content",
     borderStyle: "solid",
@@ -19,13 +21,17 @@ const Notification = ({ notifMsg, notifClass }) => {
     fontSize: "20px",
   };
 
-  const style = notifClass === "message" ? msg : error;
+  const notification = useNotificationValue();
+  const notifMsg = notification.notifMsg;
+  const notifClass = notification.notifClass;
 
-  if (notifMsg === null) {
+  const style = notifClass === "MESSAGE" ? msg : error;
+
+  if (notifMsg === "") {
     return null;
   }
 
-  return <div style={style}>{notifMsg}</div>;
+  return <div style={style}>{notifMsg?.notifMsg}</div>;
 };
 
 export default Notification;
